@@ -1,0 +1,24 @@
+node("ansible_docker"){
+    stage("Git checkout"){
+        git credentialsId: '17feae12-a79e-42d7-a14b-a0f72ea905d2', url: 'git@github.com:aragastmatb/example-playbook.git'
+    }
+    stage("Prepare ssh key"){
+        secret_check=true
+    }
+    stage("Run playbook"){
+        if (secret_check){
+            withCredentials([file(credentialsId: '30faa55e-8adb-4841-a196-88d4082047b8', variable: 'SECRET')]) {
+                sh '''ansible-vault decrypt secret --vault-password-file ${SECRET}
+                mkdir -p ~/.ssh/ && mv ./secret ~/.ssh/id_rsa && chmod 400 ~/.ssh/id_rsa
+                echo -e "Host github.com\\n   StrictHostKeyChecking no\\n   UserKnownHostsFile=/dev/null" > ~/.ssh/config
+                ansible-galaxy install -r requirements.yml -p roles
+                ansible-playbook site.yml -i inventory/prod.yml'''
+            }
+            
+        }
+        else{
+            echo 'no more keys'
+        }
+        
+    }
+}
